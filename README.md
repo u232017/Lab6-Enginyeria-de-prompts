@@ -182,3 +182,8 @@ NORMES
 
 Pensa pas a pas abans de tocar res. Comença per la fase 1 (auditoria)
 i mostra'm els problemes que detectes abans de corregir-los.
+
+<img width="1512" height="953" alt="Captura de pantalla 2026-05-18 a las 17 09 37" src="https://github.com/user-attachments/assets/dfcf93d9-c251-4962-b2ae-8308bd6b1a2e" />
+<img width="1512" height="947" alt="Captura de pantalla 2026-05-18 a las 17 09 49" src="https://github.com/user-attachments/assets/e8285b25-5a24-4099-bbb9-be8f876955dc" />
+<img width="1512" height="951" alt="Captura de pantalla 2026-05-18 a las 17 09 56" src="https://github.com/user-attachments/assets/55a9792e-37b8-4609-9f6a-878e17bdd7d5" />
+
