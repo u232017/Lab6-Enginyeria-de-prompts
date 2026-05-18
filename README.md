@@ -49,3 +49,16 @@ Claude, ens ha preguntat un seguit de coses, i nosaltres li hem respòs:
 
 <img width="1600" height="869" alt="image" src="https://github.com/user-attachments/assets/d3612c0f-ce0c-4ec6-82d5-ded6ae43b716" />
 
+
+## TERCER PROMPT
+Passa tot aixo que hem fet a claude design a code. Aprofita el que ja esta fet en les versions anteriors
+
+Questions answered:
+- com_acces_repo: Et passo una URL de GitHub
+- stack_real: No lo se mira-ho
+- estat_repo: Mira-ho tu
+- auth_tipus: Encara no decidit — tria tu
+- ja_ports_ui: Decide for me
+- fidelitat_visual: Polir-lo una mica (mantenir fonts handwritten però més net)
+- extra: Necesito que lo hagas funcional i aproveches lo que esta hecho ya en el repo, tampoco debes complicarte mucho la vida porque solo tenemos un dia para hacer esto. Repo:https://github.com/u232017/Lab6-Enginyeria-de-prompts
+
