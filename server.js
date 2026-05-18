@@ -12,8 +12,26 @@ const MAX_RESERVATIONS_PER_USER = 3;
 
 initDatabase();
 
-app.use(cors());
+// ─── CORS: obert en desenvolupament, restringit per origen en producció ───
+if (process.env.NODE_ENV === 'production') {
+  const allowedOrigin = process.env.CORS_ORIGIN;
+  app.use(cors({ origin: allowedOrigin || false }));
+} else {
+  app.use(cors());
+}
+
 app.use(express.json());
+
+// ─── Logger bàsic de peticions: mètode + path + status + ms ───
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    console.log(`${req.method} ${req.path} ${res.statusCode} ${ms}ms`);
+  });
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 function isValidEmail(email) {
@@ -30,6 +48,32 @@ function createToken(user) {
     JWT_SECRET,
     { expiresIn: '24h' }
   );
+}
+
+// ─── Rate limit en memòria per /api/auth/login: 5 intents / 15 min per IP ───
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+
+function loginRateLimit(req, res, next) {
+  const ip = req.ip;
+  const now = Date.now();
+  let entry = loginAttempts.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + LOGIN_WINDOW_MS };
+    loginAttempts.set(ip, entry);
+  }
+
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    const retryMin = Math.ceil((entry.resetAt - now) / 60000);
+    return res.status(429).json({
+      error: `Massa intents. Torna-ho a provar d'aquí ${retryMin} min`
+    });
+  }
+
+  entry.count += 1;
+  next();
 }
 
 function authMiddleware(req, res, next) {
@@ -74,23 +118,23 @@ app.post('/api/auth/register', (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Anti-enumeració: la resposta és idèntica tant si el correu és nou
+  // com si ja existeix. Mai no es revela quins correus estan registrats.
+  // Per això el registre no inicia sessió automàticament.
   const existing = db.prepare('SELECT id FROM Users WHERE email = ?').get(normalizedEmail);
-  if (existing) {
-    return res.status(409).json({ error: "No s'ha pogut completar el registre" });
+  if (!existing) {
+    const passwordHash = bcrypt.hashSync(password, 10);
+    db.prepare("INSERT INTO Users (email, password_hash, role) VALUES (?, ?, 'user')")
+      .run(normalizedEmail, passwordHash);
   }
 
-  const passwordHash = bcrypt.hashSync(password, 10);
-  const result = db
-    .prepare("INSERT INTO Users (email, password_hash, role) VALUES (?, ?, 'user')")
-    .run(normalizedEmail, passwordHash);
-
-  const user = { id: result.lastInsertRowid, email: normalizedEmail, role: 'user' };
-  const token = createToken(user);
-
-  res.status(201).json({ message: 'Registre exitos', user, token });
+  res.status(201).json({
+    message: 'Registre processat. Si el correu no estava registrat, ja pots iniciar sessió.'
+  });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginRateLimit, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Cal indicar correu i contrasenya' });
@@ -103,6 +147,9 @@ app.post('/api/auth/login', (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'Credencials incorrectes' });
   }
+
+  // Login correcte: alliberem el comptador de rate limit d'aquesta IP.
+  loginAttempts.delete(req.ip);
 
   const token = createToken(user);
   res.json({
@@ -313,7 +360,32 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+// ─── Manejador global d'errors: mai un 500 sense JSON ───
+app.use((err, _req, res, next) => {
+  console.error('Error no controlat:', err.message);
+
+  // Cos JSON malformat (express.json())
+  if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'JSON invalid al cos de la peticio' });
+  }
+
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({ error: 'Error intern del servidor' });
+});
+
+const server = app.listen(PORT, () => {
   console.log(`Servidor en http://localhost:${PORT}`);
   console.log('Admin per defecte: admin@biblioteca.cat / Admin123!');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `\nEl port ${PORT} ja esta ocupat. Tanca l'altre proces o arrenca ` +
+      `amb un altre port:\n  lsof -ti:${PORT} | xargs kill -9\n  PORT=3001 npm start\n`
+    );
+    process.exit(1);
+  }
+  console.error('Error al servidor:', err.message);
+  process.exit(1);
 });

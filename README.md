@@ -62,3 +62,66 @@ Questions answered:
 - fidelitat_visual: Polir-lo una mica (mantenir fonts handwritten però més net)
 - extra: Necesito que lo hagas funcional i aproveches lo que esta hecho ya en el repo, tampoco debes complicarte mucho la vida porque solo tenemos un dia para hacer esto. Repo:https://github.com/u232017/Lab6-Enginyeria-de-prompts
 
+---
+
+# Sistema de Reserves de Biblioteca — MVP
+
+API REST en Node.js + Express + SQLite amb frontend vanilla. Implementa les
+4 històries d'usuari: registre, reserva, alta de llibres i cancel·lació.
+
+## Com arrencar
+
+```bash
+npm install
+npm start
+```
+
+L'aplicació queda disponible a **http://localhost:3000**. La base de dades
+(`data/biblioteca.db`) es crea i se sembra sola el primer cop.
+
+### Variables d'entorn (opcionals)
+
+| Variable      | Per a què serveix                                              |
+|---------------|----------------------------------------------------------------|
+| `PORT`        | Port del servidor (per defecte `3000`).                        |
+| `JWT_SECRET`  | Secret per signar els JWT. **Canvia'l en producció.**          |
+| `NODE_ENV`    | Si val `production`, el CORS es restringeix per origen.        |
+| `CORS_ORIGIN` | Origen permès quan `NODE_ENV=production`.                      |
+
+## Credencials de prova
+
+| Rol   | Correu                 | Contrasenya |
+|-------|------------------------|-------------|
+| admin | admin@biblioteca.cat   | Admin123!   |
+| user  | julia@uni.cat          | Test1234    |
+
+A l'arrencar amb la BD buida també es sembren 8 llibres catalans (Pla,
+Rodoreda, Cabré, Moncada, Barbal, Villalonga…).
+
+## Endpoints
+
+| Mètode | Ruta                              | Auth        | Descripció                          |
+|--------|-----------------------------------|-------------|-------------------------------------|
+| POST   | `/api/auth/register`              | —           | Registre (no inicia sessió).        |
+| POST   | `/api/auth/login`                 | — (rate-lim)| Login → `{ user, token }`.          |
+| GET    | `/api/auth/me`                    | token       | Verifica el token actual.           |
+| GET    | `/api/books`                      | —           | Llista el catàleg.                  |
+| POST   | `/api/books`                      | admin       | Alta de llibre.                     |
+| GET    | `/api/reservations`               | token       | Reserves de l'usuari.               |
+| GET    | `/api/reservations/active-count`  | token       | Nombre de reserves actives.         |
+| POST   | `/api/reservations`               | token       | Crea una reserva.                   |
+| DELETE | `/api/reservations/:id`           | token       | Cancel·la una reserva.              |
+
+## Robustesa
+
+- Logger de peticions (`mètode path status ms`).
+- Manejador global d'errors: cap `500` sense JSON.
+- Rate limit a `/api/auth/login`: 5 intents / 15 min per IP.
+- Transaccions atòmiques en reservar i cancel·lar.
+- Registre anti-enumeració: la resposta no revela si un correu existeix.
+
+## Proves
+
+Checklist manual pas a pas amb comandaments `curl`: vegeu
+[`docs/TESTING.md`](docs/TESTING.md).
+

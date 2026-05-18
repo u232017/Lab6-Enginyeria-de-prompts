@@ -52,6 +52,8 @@ function initDatabase() {
   `);
 
   seedAdminUser();
+  seedTestUser();
+  seedBooks();
 }
 
 function seedAdminUser() {
@@ -65,6 +67,48 @@ function seedAdminUser() {
   ).run(adminEmail, passwordHash);
 
   console.log('Usuari administrador creat: admin@biblioteca.cat / Admin123!');
+}
+
+function seedTestUser() {
+  const testEmail = 'julia@uni.cat';
+  const exists = db.prepare('SELECT id FROM Users WHERE email = ?').get(testEmail);
+  if (exists) return;
+
+  const passwordHash = bcrypt.hashSync('Test1234', 10);
+  db.prepare(
+    "INSERT INTO Users (email, password_hash, role) VALUES (?, ?, 'user')"
+  ).run(testEmail, passwordHash);
+
+  console.log('Usuari de prova creat: julia@uni.cat / Test1234');
+}
+
+function seedBooks() {
+  const count = db.prepare('SELECT COUNT(*) AS n FROM Books').get();
+  if (count.n > 0) return;
+
+  const books = [
+    ['El quadern gris', 'Josep Pla', '9788429776034', 3],
+    ['La plaça del Diamant', 'Mercè Rodoreda', '9788429721584', 4],
+    ['Mirall trencat', 'Mercè Rodoreda', '9788429749366', 2],
+    ['Jo confesso', 'Jaume Cabré', '9788429762689', 5],
+    ['Les veus del Pamano', 'Jaume Cabré', '9788429757330', 2],
+    ['Camí de sirga', 'Jesús Moncada', '9788429733159', 3],
+    ['Pedra de tartera', 'Maria Barbal', '9788429745139', 1],
+    ['Bearn o la sala de les nines', 'Llorenç Villalonga', '9788429750119', 2]
+  ];
+
+  const insert = db.prepare(
+    `INSERT INTO Books (title, author, isbn, copies_total, copies_available, status)
+     VALUES (?, ?, ?, ?, ?, 'Disponible')`
+  );
+  const insertAll = db.transaction((rows) => {
+    for (const [title, author, isbn, copies] of rows) {
+      insert.run(title, author, isbn, copies, copies);
+    }
+  });
+  insertAll(books);
+
+  console.log(`Catàleg inicial sembrat: ${books.length} llibres`);
 }
 
 function syncBookStatus(bookId) {

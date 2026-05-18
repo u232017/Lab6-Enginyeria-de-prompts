@@ -26,11 +26,31 @@ async function api(path, options = {}) {
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
+    // Token caducat o invàlid a meitat de sessió → logout i tornar a auth.
+    if (res.status === 401 && token) {
+      logout();
+      toast('La sessió ha caducat. Torna a iniciar sessió.', 'error');
+    }
     const err = new Error(data.error || `Error ${res.status}`);
     err.status = res.status;
     throw err;
   }
   return data;
+}
+
+// Desactiva un botó i hi mostra un text de càrrega mentre dura `fn`,
+// per evitar dobles clics durant les peticions.
+async function withButton(btn, label, fn) {
+  if (!btn) return fn();
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = label;
+  try {
+    return await fn();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 }
 
 // ─── Session ────────────────────────────────────────────
@@ -125,36 +145,44 @@ $$('.auth-tab').forEach((btn) => {
 $('#loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(e.target);
-  try {
-    const data = await api('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
-    });
-    saveSession(data.user, data.token);
-    toast(`Hola ${data.user.email}!`, 'success');
-  } catch (err) {
-    toast(err.message, 'error');
-  }
+  const btn = e.target.querySelector('button[type="submit"]');
+  await withButton(btn, 'Entrant…', async () => {
+    try {
+      const data = await api('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
+      });
+      saveSession(data.user, data.token);
+      toast(`Hola ${data.user.email}!`, 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 });
 
 $('#registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const fd = new FormData(e.target);
-  try {
-    const data = await api('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({
-        email: fd.get('email'),
-        password: fd.get('password'),
-        confirmPassword: fd.get('confirmPassword'),
-      }),
-    });
-    saveSession(data.user, data.token);
-    toast('Compte creat. Ja estàs dins.', 'success');
-    e.target.reset();
-  } catch (err) {
-    toast(err.message, 'error');
-  }
+  const form = e.target;
+  const fd = new FormData(form);
+  const btn = form.querySelector('button[type="submit"]');
+  await withButton(btn, 'Creant…', async () => {
+    try {
+      const data = await api('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: fd.get('email'),
+          password: fd.get('password'),
+          confirmPassword: fd.get('confirmPassword'),
+        }),
+      });
+      // El registre no inicia sessió (anti-enumeració): passem a login.
+      toast(data.message || 'Registre processat. Ja pots iniciar sessió.', 'success');
+      form.reset();
+      $('.auth-tab[data-tab="login"]').click();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 });
 
 $('#btnLogout').addEventListener('click', logout);
@@ -226,7 +254,7 @@ function renderCatalog() {
     .join('');
 
   tbody.querySelectorAll('[data-act="reserve"]').forEach((btn) => {
-    btn.addEventListener('click', () => reserveBook(btn.dataset.book));
+    btn.addEventListener('click', () => reserveBook(btn.dataset.book, btn));
   });
 }
 
@@ -234,17 +262,19 @@ $('#catalogSearch').addEventListener('input', () => {
   if (_allBooks.length) renderCatalog();
 });
 
-async function reserveBook(bookId) {
-  try {
-    await api('/reservations', {
-      method: 'POST',
-      body: JSON.stringify({ bookId: parseInt(bookId, 10) }),
-    });
-    toast('Reserva creada. El llibre s\'ha marcat com a Reservat.', 'success');
-    loadCatalog();
-  } catch (err) {
-    toast(err.message, 'error');
-  }
+async function reserveBook(bookId, btn) {
+  await withButton(btn, 'Reservant…', async () => {
+    try {
+      await api('/reservations', {
+        method: 'POST',
+        body: JSON.stringify({ bookId: parseInt(bookId, 10) }),
+      });
+      toast('Reserva creada.', 'success');
+      loadCatalog();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 }
 
 // ─── Reservations ───────────────────────────────────────
@@ -266,7 +296,7 @@ async function loadReservations() {
     } else {
       activeBox.innerHTML = active.map(reservationCard).join('');
       activeBox.querySelectorAll('[data-act="cancel"]').forEach((btn) => {
-        btn.addEventListener('click', () => cancelReservation(btn.dataset.id));
+        btn.addEventListener('click', () => cancelReservation(btn.dataset.id, btn));
       });
     }
 
@@ -306,15 +336,17 @@ function reservationCard(r) {
     </div>`;
 }
 
-async function cancelReservation(id) {
+async function cancelReservation(id, btn) {
   if (!confirm('Cancel·lar aquesta reserva? El llibre tornarà a estar disponible.')) return;
-  try {
-    await api(`/reservations/${id}`, { method: 'DELETE' });
-    toast('Reserva cancel·lada. Llibre disponible.', 'success');
-    loadReservations();
-  } catch (err) {
-    toast(err.message, 'error');
-  }
+  await withButton(btn, 'Cancel·lant…', async () => {
+    try {
+      await api(`/reservations/${id}`, { method: 'DELETE' });
+      toast('Reserva cancel·lada. Llibre disponible.', 'success');
+      loadReservations();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 }
 
 // ─── Admin · books ──────────────────────────────────────
@@ -353,23 +385,27 @@ async function loadAdminBooks() {
 
 $('#addBookForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const fd = new FormData(e.target);
-  try {
-    await api('/books', {
-      method: 'POST',
-      body: JSON.stringify({
-        title: fd.get('title'),
-        author: fd.get('author'),
-        isbn: fd.get('isbn'),
-        copies: fd.get('copies'),
-      }),
-    });
-    toast('Llibre afegit al catàleg.', 'success');
-    e.target.reset();
-    loadAdminBooks();
-  } catch (err) {
-    toast(err.message, 'error');
-  }
+  const form = e.target;
+  const fd = new FormData(form);
+  const btn = form.querySelector('button[type="submit"]');
+  await withButton(btn, 'Desant…', async () => {
+    try {
+      await api('/books', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: fd.get('title'),
+          author: fd.get('author'),
+          isbn: fd.get('isbn'),
+          copies: fd.get('copies'),
+        }),
+      });
+      toast('Llibre afegit al catàleg.', 'success');
+      form.reset();
+      loadAdminBooks();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 });
 
 // ─── Utils ──────────────────────────────────────────────
