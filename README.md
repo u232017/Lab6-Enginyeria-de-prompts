@@ -47,37 +47,5 @@ Claude, ens ha preguntat un seguit de coses, i nosaltres li hem respòs:
 - idioma: Català
 - tweaks: Decide for me
 
----
+<img width="1600" height="869" alt="image" src="https://github.com/user-attachments/assets/d3612c0f-ce0c-4ec6-82d5-ded6ae43b716" />
 
-## MVP implementat
-
-MVP del **Sistema de Reserves de Biblioteca** (Node.js + Express + SQLite).
-
-Documentació de requisits: [docs/criteris-acceptacio.md](docs/criteris-acceptacio.md)
-
-### Inicialització
-
-```bash
-npm install
-npm start
-```
-
-Obre **http://localhost:3000**
-
-### Credencials per defecte
-
-| Rol   | Correu                 | Contrasenya  |
-|-------|------------------------|--------------|
-| Admin | admin@biblioteca.cat   | Admin123!    |
-
-### API REST
-
-| Mètode | Endpoint | Descripció |
-|--------|----------|------------|
-| POST | /api/auth/register | Registre usuari |
-| POST | /api/auth/login | Login (JWT) |
-| GET | /api/books | Llistat llibres |
-| POST | /api/books | Afegir llibre (admin) |
-| GET | /api/reservations | Reserves de l'usuari |
-| POST | /api/reservations | Crear reserva (màx. 3) |
-| DELETE | /api/reservations/:id | Cancel·lar reserva |
