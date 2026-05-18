@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca — Reserves MVP</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Biblioteca — Sistema de Reserves</h1>
+    <div id="userInfo" class="user-badge hidden">
+      Connectat: <strong id="userEmail"></strong>
+      (<span id="userRole"></span>)
+      · Reserves: <span id="reservationCount">0</span>/3
+      <button type="button" class="secondary" id="btnLogout" style="margin-left:0.5rem">Sortir</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="authSection" class="grid-2">
+      <div class="card">
+        <h2>US-01 · Registre</h2>
+        <form id="registerForm">
+          <label>Correu electrònic
+            <input type="email" name="email" required placeholder="anna@example.com">
+          </label>
+          <label>Contrasenya (mín. 8, lletra + dígit)
+            <input type="password" name="password" required minlength="8">
+          </label>
+          <label>Confirmar contrasenya
+            <input type="password" name="confirmPassword" required minlength="8">
+          </label>
+          <button type="submit">Registrar-se</button>
+        </form>
+        <div id="registerMessage" class="message hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>Iniciar sessió</h2>
+        <form id="loginForm">
+          <label>Correu
+            <input type="email" name="email" required placeholder="admin@biblioteca.cat">
+          </label>
+          <label>Contrasenya
+            <input type="password" name="password" required placeholder="Admin123!">
+          </label>
+          <button type="submit">Entrar</button>
+        </form>
+        <p class="empty" style="margin-top:0.75rem">Admin per defecte: admin@biblioteca.cat / Admin123!</p>
+        <div id="loginMessage" class="message hidden"></div>
+      </div>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <div id="adminPanel" class="card hidden">
+        <h2>US-03 · Afegir llibre (admin)</h2>
+        <form id="addBookForm">
+          <div class="grid-2" style="gap:0.75rem">
+            <label>Títol
+              <input type="text" name="title" required>
+            </label>
+            <label>Autor
+              <input type="text" name="author" required>
+            </label>
+            <label>ISBN-13
+              <input type="text" name="isbn" required pattern="\d{13}" title="13 dígits" placeholder="9788491050293">
+            </label>
+            <label>Nombre d'exemplars
+              <input type="number" name="copies" required min="1" value="1">
+            </label>
+          </div>
+          <button type="submit" style="margin-top:0.75rem">Afegir al catàleg</button>
+        </form>
+        <div id="addBookMessage" class="message hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>US-02 · Catàleg i reserves</h2>
+        <div id="booksMessage" class="message hidden"></div>
+        <div style="overflow-x:auto;margin-top:0.75rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Títol</th>
+                <th>Autor</th>
+                <th>ISBN</th>
+                <th>Disponibles</th>
+                <th>Estat</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="booksTableBody">
+              <tr><td colspan="6" class="empty">Carregant...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>US-04 · Les meves reserves</h2>
+        <div id="reservationsMessage" class="message hidden"></div>
+        <div style="overflow-x:auto;margin-top:0.75rem">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Llibre</th>
+                <th>ISBN</th>
+                <th>Estat reserva</th>
+                <th>Data</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="reservationsTableBody">
+              <tr><td colspan="6" class="empty">Sense reserves</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
