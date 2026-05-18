@@ -27,3 +27,5 @@ Si us plau, genera la següent sortida sense placeholders (vull el codi complet 
 Pensa pas a pas abans d'escriure el codi per assegurar-te que les relacions entre la base de dades i els endpoints són coherents.
 
 <img width="1311" height="873" alt="Screenshot 2026-05-18 at 15 53 46 (1)" src="https://github.com/user-attachments/assets/296fc225-5b8f-4394-bccb-5c6ad8e59fda" />
+
+
