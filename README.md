@@ -28,4 +28,25 @@ Pensa pas a pas abans d'escriure el codi per assegurar-te que les relacions entr
 
 <img width="1311" height="873" alt="Screenshot 2026-05-18 at 15 53 46 (1)" src="https://github.com/user-attachments/assets/296fc225-5b8f-4394-bccb-5c6ad8e59fda" />
 
+Ara, hem canviat de Cursor amb Codex, a Claude design per millorar la qualitat de la aplicació.
+
+SEGON PROMPT:
+
+Li hem inserit el prompt anterior, y el document que ens ha proporcionat el professorat, i hem afegit:
+"Quiero hacer dos versiones de diseño a partir de la versión 1"
+
+Claude, ens ha preguntat un seguit de coses, i nosaltres li hem respòs:
+
+Questions answered:
+- que_es_versio_1: La 'versió 1' és el codi/funcionalitat del prompt — vull 2 wireframes diferents que la implementin visualment
+- tipus_output: Mockups hi-fi (amb estils, colors, tipografia del design system)
+- pantalles: Totes les anteriors
+- dimensio_variacio: Explore a few options
+- dispositiu: Desktop (web)
+- estil_visual: Low-fi sketch (b&n, esbós, sense colors) — recomanat per wireframes
+- idioma: Català
+- tweaks: Decide for me
+
+  
+
 
