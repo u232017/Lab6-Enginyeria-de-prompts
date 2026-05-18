@@ -1,4 +1,4 @@
-# Lab6-Enginyeria-de-prompts
+<img width="1512" height="952" alt="Captura de pantalla 2026-05-18 a las 16 56 48" src="https://github.com/user-attachments/assets/dc9123b8-bbed-42a4-be32-cca18cc2a952" /><img width="1512" height="949" alt="Captura de pantalla 2026-05-18 a las 16 56 56" src="https://github.com/user-attachments/assets/1052977b-b9cc-443a-aff0-72d8d498b055" /># Lab6-Enginyeria-de-prompts
 
 ## PRIMER PROMPT
 
@@ -61,6 +61,10 @@ Questions answered:
 - ja_ports_ui: Decide for me
 - fidelitat_visual: Polir-lo una mica (mantenir fonts handwritten però més net)
 - extra: Necesito que lo hagas funcional i aproveches lo que esta hecho ya en el repo, tampoco debes complicarte mucho la vida porque solo tenemos un dia para hacer esto. Repo:https://github.com/u232017/Lab6-Enginyeria-de-prompts
+![Uploading Captura de pantalla 2026-05-18 a las 16.56.56.png…]!<img width="1509" height="951" alt="Captura de pantalla 2026-05-18 a las 16 56 30" src="https://github.com/user-attachments/assets/e575ef60-4846-485e-899f-1423d033fc84" />
+<img width="1512" height="945" alt="Captura de pantalla 2026-05-18 a las 16 56 40" src="https://github.com/user-attachments/assets/62d9e971-0f95-472d-a4e2-708c278a7cac" />
+[Uploading Captura de pantalla 2026-05-18 a las 16.56.48.png…]()
+()
 
 
 ## CUART PROMPT
