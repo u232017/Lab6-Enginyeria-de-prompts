@@ -1,30 +1,30 @@
+/* ============================================================
+   Biblio · sistema de reserves — frontend
+   Cabeces a /api segons l'API existent. JWT a localStorage.
+   ============================================================ */
+
 const API = '/api';
+const MAX_RESERVATIONS = 3;
 
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
-const authSection = document.getElementById('authSection');
-const appSection = document.getElementById('appSection');
-const userInfo = document.getElementById('userInfo');
-const adminPanel = document.getElementById('adminPanel');
+// ─── DOM refs ───────────────────────────────────────────
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-function showMessage(el, text, type = 'error') {
-  el.textContent = text;
-  el.className = `message ${type}`;
-  el.classList.remove('hidden');
-}
+const authScreen = $('#authScreen');
+const appShell = $('#appShell');
+const adminLinks = $('#adminLinks');
 
-function hideMessage(el) {
-  el.classList.add('hidden');
-}
-
+// ─── API helper ─────────────────────────────────────────
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API}${path}`, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-
+  let data = {};
+  try { data = await res.json(); } catch {}
   if (!res.ok) {
     const err = new Error(data.error || `Error ${res.status}`);
     err.status = res.status;
@@ -33,31 +33,13 @@ async function api(path, options = {}) {
   return data;
 }
 
-function updateUI() {
-  if (currentUser && token) {
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    userInfo.classList.remove('hidden');
-    document.getElementById('userEmail').textContent = currentUser.email;
-    document.getElementById('userRole').textContent = currentUser.role;
-    adminPanel.classList.toggle('hidden', currentUser.role !== 'admin');
-    loadBooks();
-    loadReservations();
-    updateReservationCount();
-  } else {
-    authSection.classList.remove('hidden');
-    appSection.classList.add('hidden');
-    userInfo.classList.add('hidden');
-    adminPanel.classList.add('hidden');
-  }
-}
-
+// ─── Session ────────────────────────────────────────────
 function saveSession(user, newToken) {
   currentUser = user;
   token = newToken;
   localStorage.setItem('token', token);
   localStorage.setItem('user', JSON.stringify(user));
-  updateUI();
+  enterApp();
 }
 
 function logout() {
@@ -65,70 +47,313 @@ function logout() {
   currentUser = null;
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  updateUI();
+  showAuth();
 }
 
-async function updateReservationCount() {
-  try {
-    const { count } = await api('/reservations/active-count');
-    document.getElementById('reservationCount').textContent = count;
-  } catch {
-    document.getElementById('reservationCount').textContent = '?';
+function showAuth() {
+  appShell.classList.add('hidden');
+  authScreen.classList.remove('hidden');
+}
+
+function enterApp() {
+  authScreen.classList.add('hidden');
+  appShell.classList.remove('hidden');
+
+  // user badge
+  $('#userEmail').textContent = currentUser.email;
+  $('#userRole').textContent = currentUser.role;
+  $('#userAvatar').textContent = (currentUser.email[0] || '·').toUpperCase();
+
+  // admin nav
+  if (currentUser.role === 'admin') {
+    adminLinks.classList.remove('hidden');
+  } else {
+    adminLinks.classList.add('hidden');
   }
+
+  // initial route
+  navigate(location.hash || '#catalog');
 }
 
-document.getElementById('registerForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('registerMessage');
-  hideMessage(msg);
-  const fd = new FormData(e.target);
+// ─── Toasts ─────────────────────────────────────────────
+function toast(text, type = 'info', timeoutMs = 4500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div class="tx"></div><button type="button" class="x" aria-label="tancar">×</button>`;
+  el.querySelector('.tx').textContent = text;
+  el.querySelector('.x').addEventListener('click', () => el.remove());
+  $('#toasts').appendChild(el);
+  if (timeoutMs > 0) setTimeout(() => el.remove(), timeoutMs);
+}
 
+// ─── Routing (hash-based) ───────────────────────────────
+const ROUTES = ['catalog', 'reservations', 'admin-books'];
+
+function navigate(hash) {
+  let route = (hash || '').replace('#', '');
+  if (!ROUTES.includes(route)) route = 'catalog';
+  if (route === 'admin-books' && currentUser?.role !== 'admin') route = 'catalog';
+
+  // active link
+  $$('.sb-link').forEach((a) => {
+    a.classList.toggle('active', a.dataset.route === route);
+  });
+  // view visibility
+  $$('.view').forEach((v) => v.classList.remove('active'));
+  const view = $(`#view-${route}`);
+  if (view) view.classList.add('active');
+
+  // load data per route
+  if (route === 'catalog') loadCatalog();
+  if (route === 'reservations') loadReservations();
+  if (route === 'admin-books') loadAdminBooks();
+}
+
+window.addEventListener('hashchange', () => navigate(location.hash));
+
+// ─── Auth tabs ──────────────────────────────────────────
+$$('.auth-tab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    $$('.auth-tab').forEach((b) => b.classList.toggle('active', b === btn));
+    $('#loginForm').classList.toggle('hidden', tab !== 'login');
+    $('#registerForm').classList.toggle('hidden', tab !== 'register');
+  });
+});
+
+// ─── Auth handlers ──────────────────────────────────────
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
+    });
+    saveSession(data.user, data.token);
+    toast(`Hola ${data.user.email}!`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+});
+
+$('#registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
   try {
     const data = await api('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         email: fd.get('email'),
         password: fd.get('password'),
-        confirmPassword: fd.get('confirmPassword')
-      })
+        confirmPassword: fd.get('confirmPassword'),
+      }),
     });
     saveSession(data.user, data.token);
-    showMessage(msg, 'Registre exitos! Ja estàs connectat.', 'success');
+    toast('Compte creat. Ja estàs dins.', 'success');
     e.target.reset();
   } catch (err) {
-    showMessage(msg, err.message, 'error');
+    toast(err.message, 'error');
   }
 });
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('loginMessage');
-  hideMessage(msg);
-  const fd = new FormData(e.target);
+$('#btnLogout').addEventListener('click', logout);
+
+// ─── Catalog ────────────────────────────────────────────
+let _allBooks = [];
+
+async function loadCatalog() {
+  const tbody = $('#catalogBody');
+  tbody.innerHTML = `<tr><td colspan="7" class="empty">Carregant catàleg…</td></tr>`;
+  try {
+    _allBooks = await api('/books');
+    renderCatalog();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Error: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderCatalog() {
+  const tbody = $('#catalogBody');
+  const q = $('#catalogSearch').value.trim().toLowerCase();
+  const books = _allBooks.filter((b) => {
+    if (!q) return true;
+    return (
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q) ||
+      b.isbn.includes(q)
+    );
+  });
+
+  $('#catalogCount').textContent = `${books.length} llibre${books.length === 1 ? '' : 's'}`;
+
+  if (books.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No s'ha trobat cap llibre.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = books
+    .map((b) => {
+      const canReserve = b.copies_available > 0 && b.status === 'Disponible';
+      const statusTag =
+        b.status === 'Disponible'
+          ? `<span class="tag ok">Disponible</span>`
+          : `<span class="tag warn">Reservat</span>`;
+      return `
+        <tr>
+          <td><div class="cover-mini"></div></td>
+          <td>
+            <div class="title-cell">
+              <div>
+                <div class="row-title">${escapeHtml(b.title)}</div>
+                <div class="meta">ID #${b.id}</div>
+              </div>
+            </div>
+          </td>
+          <td>${escapeHtml(b.author)}</td>
+          <td class="row-sub" style="font-family:var(--font-mark);font-size:13px">${escapeHtml(b.isbn)}</td>
+          <td>${b.copies_available} / ${b.copies_total}</td>
+          <td>${statusTag}</td>
+          <td class="cell-actions">
+            ${
+              canReserve
+                ? `<button class="btn sm primary" data-book="${b.id}" data-act="reserve">Reservar →</button>`
+                : `<button class="btn sm" disabled>—</button>`
+            }
+          </td>
+        </tr>`;
+    })
+    .join('');
+
+  tbody.querySelectorAll('[data-act="reserve"]').forEach((btn) => {
+    btn.addEventListener('click', () => reserveBook(btn.dataset.book));
+  });
+}
+
+$('#catalogSearch').addEventListener('input', () => {
+  if (_allBooks.length) renderCatalog();
+});
+
+async function reserveBook(bookId) {
+  try {
+    await api('/reservations', {
+      method: 'POST',
+      body: JSON.stringify({ bookId: parseInt(bookId, 10) }),
+    });
+    toast('Reserva creada. El llibre s\'ha marcat com a Reservat.', 'success');
+    loadCatalog();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ─── Reservations ───────────────────────────────────────
+async function loadReservations() {
+  const activeBox = $('#reservationsActive');
+  const histBox = $('#reservationsHistory');
+  activeBox.innerHTML = `<div class="empty">Carregant…</div>`;
 
   try {
-    const data = await api('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        email: fd.get('email'),
-        password: fd.get('password')
-      })
-    });
-    saveSession(data.user, data.token);
-    showMessage(msg, 'Sessió iniciada correctament.', 'success');
+    const reservations = await api('/reservations');
+    const counts = await api('/reservations/active-count');
+    $('#reservationsCount').textContent = `${counts.count} / ${counts.max} actives`;
+
+    const active = reservations.filter((r) => r.status === 'Activa');
+    const past = reservations.filter((r) => r.status !== 'Activa');
+
+    if (active.length === 0) {
+      activeBox.innerHTML = `<div class="empty">Sense reserves actives. Vés al <a href="#catalog">catàleg</a>.</div>`;
+    } else {
+      activeBox.innerHTML = active.map(reservationCard).join('');
+      activeBox.querySelectorAll('[data-act="cancel"]').forEach((btn) => {
+        btn.addEventListener('click', () => cancelReservation(btn.dataset.id));
+      });
+    }
+
+    if (past.length === 0) {
+      histBox.innerHTML = `<div class="empty muted-line">Encara no hi ha històric.</div>`;
+    } else {
+      histBox.innerHTML = past.map(reservationCard).join('');
+    }
   } catch (err) {
-    showMessage(msg, err.message, 'error');
+    activeBox.innerHTML = `<div class="empty">Error: ${escapeHtml(err.message)}</div>`;
+    histBox.innerHTML = '';
   }
-});
+}
 
-document.getElementById('btnLogout').addEventListener('click', logout);
+function reservationCard(r) {
+  const isActive = r.status === 'Activa';
+  const dateStr = formatDate(r.created_at);
+  const cancelledStr = r.cancelled_at ? `· cancel·lada el ${formatDate(r.cancelled_at)}` : '';
+  const statusTag = isActive
+    ? `<span class="tag warn">Activa</span>`
+    : `<span class="tag muted">${r.status}</span>`;
 
-document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+  return `
+    <div class="card" style="margin-bottom:12px;${isActive ? '' : 'opacity:.6'}">
+      <div style="display:flex;gap:14px;align-items:center">
+        <div class="cover-mini" style="width:46px;height:64px"></div>
+        <div style="flex:1;min-width:0">
+          <div class="row-title ${isActive ? '' : 'strike'}">${escapeHtml(r.title)}</div>
+          <div class="row-sub">${escapeHtml(r.author)} · ISBN <span style="font-family:var(--font-mark)">${escapeHtml(r.isbn)}</span></div>
+          <div class="meta-line" style="margin-top:4px">Reservat ${dateStr} ${cancelledStr}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          ${statusTag}
+          ${isActive ? `<button class="btn sm danger" data-act="cancel" data-id="${r.id}">Cancel·la →</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function cancelReservation(id) {
+  if (!confirm('Cancel·lar aquesta reserva? El llibre tornarà a estar disponible.')) return;
+  try {
+    await api(`/reservations/${id}`, { method: 'DELETE' });
+    toast('Reserva cancel·lada. Llibre disponible.', 'success');
+    loadReservations();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ─── Admin · books ──────────────────────────────────────
+async function loadAdminBooks() {
+  const tbody = $('#adminBooksBody');
+  tbody.innerHTML = `<tr><td colspan="7" class="empty">Carregant…</td></tr>`;
+  try {
+    const books = await api('/books');
+    $('#adminBookCount').textContent = `${books.length} llibres`;
+
+    if (books.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">El catàleg està buit. Afegeix-ne un →</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = books
+      .map(
+        (b) => `
+      <tr>
+        <td><div class="cover-mini"></div></td>
+        <td>
+          <div class="row-title">${escapeHtml(b.title)}</div>
+          <div class="meta-line">ID #${b.id}</div>
+        </td>
+        <td>${escapeHtml(b.author)}</td>
+        <td style="font-family:var(--font-mark);font-size:13px">${escapeHtml(b.isbn)}</td>
+        <td>${b.copies_available} / ${b.copies_total}</td>
+        <td>${b.status === 'Disponible' ? '<span class="tag ok">Disp.</span>' : '<span class="tag warn">Res.</span>'}</td>
+        <td>${b.copies_total - b.copies_available}</td>
+      </tr>`
+      )
+      .join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Error: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+$('#addBookForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const msg = document.getElementById('addBookMessage');
-  hideMessage(msg);
   const fd = new FormData(e.target);
-
   try {
     await api('/books', {
       method: 'POST',
@@ -136,142 +361,50 @@ document.getElementById('addBookForm').addEventListener('submit', async (e) => {
         title: fd.get('title'),
         author: fd.get('author'),
         isbn: fd.get('isbn'),
-        copies: fd.get('copies')
-      })
+        copies: fd.get('copies'),
+      }),
     });
-    showMessage(msg, 'Llibre afegit al catàleg.', 'success');
+    toast('Llibre afegit al catàleg.', 'success');
     e.target.reset();
-    loadBooks();
+    loadAdminBooks();
   } catch (err) {
-    showMessage(msg, err.message, 'error');
+    toast(err.message, 'error');
   }
 });
 
-async function loadBooks() {
-  const tbody = document.getElementById('booksTableBody');
-  const msg = document.getElementById('booksMessage');
-  hideMessage(msg);
-
-  try {
-    const books = await api('/books');
-    if (books.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No hi ha llibres al catàleg</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = books
-      .map((book) => {
-        const canReserve = book.copies_available > 0 && book.status === 'Disponible';
-        const statusClass = book.status === 'Disponible' ? 'disponible' : 'reservat';
-        return `
-          <tr>
-            <td>${escapeHtml(book.title)}</td>
-            <td>${escapeHtml(book.author)}</td>
-            <td>${book.isbn}</td>
-            <td>${book.copies_available} / ${book.copies_total}</td>
-            <td><span class="status ${statusClass}">${book.status}</span></td>
-            <td>
-              ${
-                canReserve
-                  ? `<button type="button" data-book-id="${book.id}" class="btn-reserve">Reservar</button>`
-                  : '<span class="empty">—</span>'
-              }
-            </td>
-          </tr>`;
-      })
-      .join('');
-
-    tbody.querySelectorAll('.btn-reserve').forEach((btn) => {
-      btn.addEventListener('click', () => reserveBook(btn.dataset.bookId));
-    });
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Error en carregar</td></tr>';
-    showMessage(msg, err.message, 'error');
-  }
-}
-
-async function reserveBook(bookId) {
-  const msg = document.getElementById('booksMessage');
-  hideMessage(msg);
-
-  try {
-    await api('/reservations', {
-      method: 'POST',
-      body: JSON.stringify({ bookId: parseInt(bookId, 10) })
-    });
-    showMessage(msg, 'Reserva creada correctament.', 'success');
-    loadBooks();
-    loadReservations();
-    updateReservationCount();
-  } catch (err) {
-    showMessage(msg, err.message, 'error');
-  }
-}
-
-async function loadReservations() {
-  const tbody = document.getElementById('reservationsTableBody');
-  const msg = document.getElementById('reservationsMessage');
-  hideMessage(msg);
-
-  try {
-    const reservations = await api('/reservations');
-    const active = reservations.filter((r) => r.status === 'Activa');
-
-    if (active.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No tens reserves actives</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = active
-      .map(
-        (r) => `
-        <tr>
-          <td>${r.id}</td>
-          <td>${escapeHtml(r.title)}</td>
-          <td>${r.isbn}</td>
-          <td><span class="status activa">${r.status}</span></td>
-          <td>${formatDate(r.created_at)}</td>
-          <td>
-            <button type="button" class="danger btn-cancel" data-id="${r.id}">Cancel·lar</button>
-          </td>
-        </tr>`
-      )
-      .join('');
-
-    tbody.querySelectorAll('.btn-cancel').forEach((btn) => {
-      btn.addEventListener('click', () => cancelReservation(btn.dataset.id));
-    });
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Error en carregar</td></tr>';
-    showMessage(msg, err.message, 'error');
-  }
-}
-
-async function cancelReservation(id) {
-  const msg = document.getElementById('reservationsMessage');
-  hideMessage(msg);
-
-  try {
-    await api(`/reservations/${id}`, { method: 'DELETE' });
-    showMessage(msg, 'Reserva cancel·lada. El llibre torna a estar disponible.', 'success');
-    loadBooks();
-    loadReservations();
-    updateReservationCount();
-  } catch (err) {
-    showMessage(msg, err.message, 'error');
-  }
-}
-
+// ─── Utils ──────────────────────────────────────────────
 function escapeHtml(str) {
+  if (str == null) return '';
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = String(str);
   return div.innerHTML;
 }
 
 function formatDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-  return d.toLocaleString('ca-ES', { dateStyle: 'short', timeStyle: 'short' });
+  try {
+    const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleString('ca-ES', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
 }
 
-updateUI();
+// ─── Boot ───────────────────────────────────────────────
+(async function boot() {
+  if (token && currentUser) {
+    // verify token still valid
+    try {
+      const me = await api('/auth/me');
+      currentUser = me.user;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      enterApp();
+      return;
+    } catch {
+      // token expired/invalid
+      logout();
+      return;
+    }
+  }
+  showAuth();
+})();

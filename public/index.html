@@ -1,125 +1,264 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Biblioteca — Reserves MVP</title>
-  <link rel="stylesheet" href="/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>la Biblio. — Sistema de Reserves</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Biblioteca — Sistema de Reserves</h1>
-    <div id="userInfo" class="user-badge hidden">
-      Connectat: <strong id="userEmail"></strong>
-      (<span id="userRole"></span>)
-      · Reserves: <span id="reservationCount">0</span>/3
-      <button type="button" class="secondary" id="btnLogout" style="margin-left:0.5rem">Sortir</button>
+
+  <!-- ───────── AUTH SCREEN (no sidebar) ───────── -->
+  <section id="authScreen" class="auth-screen hidden">
+    <div class="auth-left">
+      <div>
+        <div class="sb-logo">la<br/>Biblio<span class="dot">.</span></div>
+        <div class="meta-line" style="margin-top:8px">Sistema intern · v1.0</div>
+      </div>
+
+      <div>
+        <div class="quote">"Reservar un llibre hauria de ser tan fàcil com agafar-lo d'un prestatge."</div>
+        <div class="quote-by">— Equip de bibliotecaris</div>
+        <div class="book-stack">
+          <div class="mini-book"></div>
+          <div class="mini-book"></div>
+          <div class="mini-book"></div>
+        </div>
+      </div>
+
+      <div class="crit">
+        <div class="meta-line" style="margin-bottom:6px">Criteris</div>
+        ✓ correu vàlid &middot; ✓ <span class="mono">bcrypt</span> hash &middot;
+        ✓ rol per defecte: <b>user</b> &middot; admin per seed
+      </div>
     </div>
-  </header>
 
-  <main>
-    <section id="authSection" class="grid-2">
-      <div class="card">
-        <h2>US-01 · Registre</h2>
-        <form id="registerForm">
-          <label>Correu electrònic
-            <input type="email" name="email" required placeholder="anna@example.com">
-          </label>
-          <label>Contrasenya (mín. 8, lletra + dígit)
-            <input type="password" name="password" required minlength="8">
-          </label>
-          <label>Confirmar contrasenya
-            <input type="password" name="confirmPassword" required minlength="8">
-          </label>
-          <button type="submit">Registrar-se</button>
-        </form>
-        <div id="registerMessage" class="message hidden"></div>
+    <div class="auth-right">
+      <span class="stamp">US-01 · Accés</span>
+      <h1>Entra o registra't</h1>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">Inicia sessió</button>
+        <button type="button" class="auth-tab" data-tab="register">Registra't</button>
       </div>
 
-      <div class="card">
-        <h2>Iniciar sessió</h2>
-        <form id="loginForm">
-          <label>Correu
-            <input type="email" name="email" required placeholder="admin@biblioteca.cat">
-          </label>
-          <label>Contrasenya
-            <input type="password" name="password" required placeholder="Admin123!">
-          </label>
-          <button type="submit">Entrar</button>
-        </form>
-        <p class="empty" style="margin-top:0.75rem">Admin per defecte: admin@biblioteca.cat / Admin123!</p>
-        <div id="loginMessage" class="message hidden"></div>
-      </div>
-    </section>
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="auth-form">
+        <div class="field">
+          <label for="login-email">Correu</label>
+          <input id="login-email" type="email" name="email" required placeholder="admin@biblioteca.cat" />
+        </div>
+        <div class="field">
+          <label for="login-password">Contrasenya</label>
+          <input id="login-password" type="password" name="password" required placeholder="Admin123!" />
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+          <button type="submit" class="btn primary">Entra →</button>
+          <span class="meta-line">Admin per defecte: admin@biblioteca.cat / Admin123!</span>
+        </div>
+      </form>
 
-    <section id="appSection" class="hidden">
-      <div id="adminPanel" class="card hidden">
-        <h2>US-03 · Afegir llibre (admin)</h2>
-        <form id="addBookForm">
-          <div class="grid-2" style="gap:0.75rem">
-            <label>Títol
-              <input type="text" name="title" required>
-            </label>
-            <label>Autor
-              <input type="text" name="author" required>
-            </label>
-            <label>ISBN-13
-              <input type="text" name="isbn" required pattern="\d{13}" title="13 dígits" placeholder="9788491050293">
-            </label>
-            <label>Nombre d'exemplars
-              <input type="number" name="copies" required min="1" value="1">
-            </label>
+      <!-- REGISTER FORM -->
+      <form id="registerForm" class="auth-form hidden">
+        <div class="field">
+          <label for="reg-email">Correu</label>
+          <input id="reg-email" type="email" name="email" required placeholder="julia@uni.cat" />
+        </div>
+        <div class="field">
+          <label for="reg-password">Contrasenya</label>
+          <input id="reg-password" type="password" name="password" required minlength="8" placeholder="mínim 8 caràcters, lletra + dígit" />
+        </div>
+        <div class="field">
+          <label for="reg-confirm">Repeteix contrasenya</label>
+          <input id="reg-confirm" type="password" name="confirmPassword" required minlength="8" placeholder="••••••••" />
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+          <button type="submit" class="btn primary">Crea compte →</button>
+          <span class="meta-line">El rol assignat serà <b>user</b></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ───────── MAIN APP (with sidebar) ───────── -->
+  <div id="appShell" class="app hidden">
+    <aside class="sidebar">
+      <div class="sb-logo">la<br/>Biblio<span class="dot">.</span></div>
+
+      <div class="sb-section">Lector</div>
+      <a class="sb-link" data-route="catalog" href="#catalog">
+        <span class="dot"></span> Catàleg
+      </a>
+      <a class="sb-link" data-route="reservations" href="#reservations">
+        <span class="dot"></span> Les meves reserves
+      </a>
+
+      <div id="adminLinks" class="hidden">
+        <div class="sb-section">Administració</div>
+        <a class="sb-link" data-route="admin-books" href="#admin-books">
+          <span class="dot"></span> Gestió de llibres
+        </a>
+      </div>
+
+      <div class="sb-spacer"></div>
+
+      <div class="sb-user">
+        <div class="sb-avatar" id="userAvatar">·</div>
+        <div class="sb-user-info">
+          <div class="name" id="userEmail">—</div>
+          <div class="meta" id="userRole">—</div>
+        </div>
+        <button id="btnLogout" class="sb-logout" type="button">Sortir</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- ───── CATALOG VIEW ───── -->
+      <section id="view-catalog" class="view">
+        <div class="topbar">
+          <div class="crumb">Catàleg / <b>Tots els llibres</b></div>
+          <div class="pagehead">
+            <h1>Tots els llibres</h1>
+            <div class="head-right">
+              <input id="catalogSearch" class="input-boxed" placeholder="cerca títol, autor o ISBN..." style="max-width:300px" />
+              <span class="meta-line" id="catalogCount">— llibres</span>
+            </div>
           </div>
-          <button type="submit" style="margin-top:0.75rem">Afegir al catàleg</button>
-        </form>
-        <div id="addBookMessage" class="message hidden"></div>
-      </div>
-
-      <div class="card">
-        <h2>US-02 · Catàleg i reserves</h2>
-        <div id="booksMessage" class="message hidden"></div>
-        <div style="overflow-x:auto;margin-top:0.75rem">
-          <table>
-            <thead>
-              <tr>
-                <th>Títol</th>
-                <th>Autor</th>
-                <th>ISBN</th>
-                <th>Disponibles</th>
-                <th>Estat</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="booksTableBody">
-              <tr><td colspan="6" class="empty">Carregant...</td></tr>
-            </tbody>
-          </table>
         </div>
-      </div>
 
-      <div class="card">
-        <h2>US-04 · Les meves reserves</h2>
-        <div id="reservationsMessage" class="message hidden"></div>
-        <div style="overflow-x:auto;margin-top:0.75rem">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Llibre</th>
-                <th>ISBN</th>
-                <th>Estat reserva</th>
-                <th>Data</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="reservationsTableBody">
-              <tr><td colspan="6" class="empty">Sense reserves</td></tr>
-            </tbody>
-          </table>
+        <div class="view" style="padding:22px 32px 64px; display:block">
+          <div class="table-wrap">
+            <table class="sk-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Títol</th>
+                  <th>Autor</th>
+                  <th>ISBN</th>
+                  <th>Disponibles</th>
+                  <th>Estat</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="catalogBody">
+                <tr><td colspan="7" class="empty">Carregant catàleg…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
+
+      <!-- ───── RESERVATIONS VIEW ───── -->
+      <section id="view-reservations" class="view">
+        <div class="topbar">
+          <div class="crumb">El meu compte / <b>Reserves</b></div>
+          <div class="pagehead">
+            <h1>Les meves reserves</h1>
+            <div class="head-right">
+              <span id="reservationsCount" class="tag warn">— / 3 actives</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" style="padding:22px 32px 64px; display:block">
+          <div class="page-grid">
+            <div>
+              <span class="stamp meta-line" style="display:inline-block;padding:2px 10px;border:1.5px solid var(--ink);background:var(--paper-warm);border-radius:999px;margin-bottom:10px">US-04 · Cancel·lació</span>
+              <h2 class="h-hand" style="font-size:24px;margin:6px 0 12px">Actives</h2>
+              <div id="reservationsActive">
+                <div class="empty">Sense reserves actives.</div>
+              </div>
+
+              <h2 class="h-hand" style="font-size:24px;margin:24px 0 12px">Històric</h2>
+              <div id="reservationsHistory">
+                <div class="empty muted-line">Encara no hi ha històric.</div>
+              </div>
+            </div>
+
+            <div class="rules-box">
+              <div class="meta">Regles</div>
+              <ul>
+                <li>Màxim <span class="hl">3 reserves</span> simultànies</li>
+                <li>Només llibres <b>Disponibles</b></li>
+                <li>Cancel·lar allibera el llibre a l'instant</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───── ADMIN BOOKS VIEW ───── -->
+      <section id="view-admin-books" class="view">
+        <div class="topbar" style="background:var(--paper-warm)">
+          <div class="crumb">
+            <span class="tag danger" style="font-size:11px;padding:1px 8px">ADMIN</span>
+            &nbsp; Gestió de catàleg
+          </div>
+          <div class="pagehead">
+            <h1>Llibres</h1>
+            <div class="head-right">
+              <span class="meta-line" id="adminBookCount">— llibres</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" style="padding:22px 32px 64px; display:block">
+          <div class="admin-grid">
+            <div class="table-wrap">
+              <table class="sk-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Títol</th>
+                    <th>Autor</th>
+                    <th>ISBN</th>
+                    <th>Exempl.</th>
+                    <th>Estat</th>
+                    <th>Reserves act.</th>
+                  </tr>
+                </thead>
+                <tbody id="adminBooksBody">
+                  <tr><td colspan="7" class="empty">Carregant llibres…</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card admin-form">
+              <span class="stamp">US-03 · Nou llibre</span>
+              <h2 class="h-hand" style="font-size:24px;margin:6px 0 12px">Afegir al catàleg</h2>
+
+              <form id="addBookForm">
+                <div class="field">
+                  <label for="bk-title">Títol *</label>
+                  <input id="bk-title" class="input-boxed" type="text" name="title" required placeholder="Bearn o la sala de les nines" />
+                </div>
+                <div class="field">
+                  <label for="bk-author">Autor *</label>
+                  <input id="bk-author" class="input-boxed" type="text" name="author" required placeholder="Llorenç Villalonga" />
+                </div>
+                <div class="field">
+                  <label for="bk-isbn">ISBN-13 *</label>
+                  <input id="bk-isbn" class="input-boxed" type="text" name="isbn" required pattern="[\d\s-]{13,17}" placeholder="9788491050293" />
+                </div>
+                <div class="field">
+                  <label for="bk-copies">Nº exemplars *</label>
+                  <input id="bk-copies" class="input-boxed" type="number" name="copies" required min="1" value="1" />
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:14px">
+                  <button type="submit" class="btn primary">Desa →</button>
+                  <button type="reset" class="btn ghost">Buida</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="toasts"></div>
 
   <script src="/app.js"></script>
 </body>
